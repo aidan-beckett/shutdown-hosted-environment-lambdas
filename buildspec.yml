@@ -1,0 +1,16 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      docker: 18
+    commands:
+      - npm install typescript
+      - npm install
+  build:
+    commands:
+      - npm run build
+      - npm uninstall typescript
+      - mv node_modules build/layers/nodejs
+      - ls
+      - sam deploy -t sam-template.yml --s3-bucket sp-lambda-bucket --s3-prefix environment-shutdown-lambdas --stack-name sp-environment-shutdown-lambdas --region eu-west-2

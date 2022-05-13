@@ -1,0 +1,25 @@
+{
+  "name": "sp-environment-shutdown-lambdas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "config": {
+    "prefix": "/layers/nodejs/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://APKAQNUPRNTGEHIQOS5P@git-codecommit.eu-west-2.amazonaws.com/v1/repos/sp-environment-shutdown-lambdas"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^4.5.4"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ecs": "^3.46.0",
+    "@aws-sdk/client-rds": "^3.46.0"
+  }
+}

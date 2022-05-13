@@ -1,0 +1,97 @@
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+    ShutdownClusterArn:
+        Type: String
+        Description: Valid ARN of ECS cluster to shut down Staging and UAT related ecs services
+Resources: 
+    ApiGateway: 
+        Type: AWS::Serverless::HttpApi
+        Properties:
+            Tags: 
+                Name: EnvironmentShutdownApi
+            Description: "Api Gateway for managing the shutdown of RDS and ECS instances"
+
+    ShutdownLayer:
+        Type: AWS::Serverless::LayerVersion
+        Properties:
+            CompatibleRuntimes: 
+                - nodejs14.x
+            ContentUri: ./build/layers
+            Description: Shared Modules and Functions for AWS
+            LayerName: ShutdownLayer
+
+    SetEcsTaskCountLambda:
+        Type: AWS::Serverless::Function
+        Properties: 
+            Role: arn:aws:iam::029292063948:role/sp-environment-downtime-lambdas-role
+            PackageType: Zip
+            Handler: setEcsTaskCount.handler
+            CodeUri: build/handlers/setEcsTaskCount
+            Runtime: nodejs14.x
+            Timeout: 60
+            Layers:
+                - !Ref ShutdownLayer     
+            Events: 
+                ApiEvent:
+                    Type: HttpApi
+                    Properties: 
+                        Method: post
+                        Path: /settaskcount
+                        ApiId: !Ref ApiGateway   
+                StartScheduledEvent:
+                  Type: Schedule
+                  Properties:
+                      Schedule: cron(0 8 * * ? *)
+                      Input: { Fn::Sub: ['{"clusterArn": ${clusterArn}}, "newCount": 1}', {"clusterArn": {Ref: "ShutdownClusterArn"}}] } 
+                StopScheduledEvent:
+                  Type: Schedule
+                  Properties:
+                      Schedule: cron(30 19 * * ? *)    
+                      Input: { Fn::Sub: ['{"clusterArn": ${clusterArn}}, "newCount": 0}', {"clusterArn": {Ref: "ShutdownClusterArn"}}] }   
+
+    StopRdsInstancesLambda: 
+        Type: AWS::Serverless::Function
+        Properties: 
+            Role: arn:aws:iam::029292063948:role/sp-environment-downtime-lambdas-role
+            PackageType: Zip
+            Handler: stopRds.handler
+            CodeUri: build/handlers/stopRdsInstances
+            Runtime: nodejs14.x
+            Timeout: 60
+            Layers:
+                - !Ref ShutdownLayer
+            Events: 
+                ApiEvent:
+                    Type: HttpApi
+                    Properties: 
+                        Method: post
+                        Path: /stoprdsinstances
+                        ApiId: !Ref ApiGateway
+            ScheduledEvent:
+                Type: Schedule
+                Properties:
+                    Schedule: cron(30 19 * * ? *)
+    
+    StartRdsInstancesLambda: 
+        Type: AWS::Serverless::Function
+        Properties: 
+            Role: arn:aws:iam::029292063948:role/sp-environment-downtime-lambdas-role
+            PackageType: Zip
+            Handler: startRds.handler
+            CodeUri: build/handlers/startRdsInstances
+            Runtime: nodejs14.x
+            Timeout: 60
+            Layers:
+                - !Ref ShutdownLayer
+            Events: 
+                ApiEvent:
+                    Type: HttpApi
+                    Properties: 
+                        Method: post
+                        Path: /startrdsinstances
+                        ApiId: !Ref ApiGateway
+                ScheduledEvent:
+                    Type: Schedule
+                    Properties:
+                        Schedule: cron(0 8 * * ? *)
+            
